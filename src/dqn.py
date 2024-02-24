@@ -21,100 +21,7 @@ def greedy_action_dqn(network, state):
     with torch.no_grad():
         Q = network(torch.Tensor(state).unsqueeze(0).to(device))
         return torch.argmax(Q).item()
-    
-def greedy_action_fqi(Q,s,nb_actions):
-    Qsa = []
-    for a in range(nb_actions):
-        sa = np.append(s,a).reshape(1, -1)
-        Qsa.append(Q.predict(sa))
-    return np.argmax(Qsa)
 
-
-
-  # The time wrapper limits the number of steps in an episode at 200.
-# Now is the floor is yours to implement the agent and train it.
-
-
-# You have to implement your own agent.
-# Don't modify the methods names and signatures, but you can add methods.
-# ENJOY!
-
-class ProjectAgent:
-
-    def __init__(self):
-        pass
-
-    def collect_samples(self, env = env, horizon = int(1e4), disable_tqdm=False, print_done_states=False):
-        s, _ = env.reset()
-        #dataset = []
-        S = []
-        A = []
-        R = []
-        S2 = []
-        D = []
-        for _ in tqdm(range(horizon), disable=disable_tqdm):
-            a = env.action_space.sample()
-            s2, r, done, trunc, _ = env.step(a)
-            #dataset.append((s,a,r,s2,done,trunc))
-            S.append(s)
-            A.append(a)
-            R.append(r)
-            S2.append(s2)
-            D.append(done)
-            if done or trunc:
-                s, _ = env.reset()
-                if done and print_done_states:
-                    print("done!")
-            else:
-                s = s2
-        S = np.array(S)
-        A = np.array(A).reshape((-1,1))
-        R = np.array(R)
-        S2= np.array(S2)
-        D = np.array(D)
-        return S, A, R, S2, D
-    
-    def train(self, iterations = 10, gamma = .9, disable_tqdm = False):
-        S,A,R,S2,D = self.collect_samples()
-        nb_samples = S.shape[0]
-        Qfunctions = []
-        nb_actions = env.action_space.n
-        SA = np.append(S,A,axis=1)
-        for iter in tqdm(range(iterations), disable=disable_tqdm):
-            if iter==0:
-                value=R.copy()
-            else:
-                Q2 = np.zeros((nb_samples,nb_actions))
-                for a2 in range(nb_actions):
-                    A2 = a2*np.ones((S.shape[0],1))
-                    S2A2 = np.append(S2,A2,axis=1)
-                    Q2[:,a2] = Qfunctions[-1].predict(S2A2)
-                max_Q2 = np.max(Q2,axis=1)
-                value = R + gamma*(1-D)*max_Q2
-            Q = ExtraTreesRegressor()
-            Q.fit(SA,value)
-            Qfunctions.append(Q)
-        return Qfunctions
-
-
-
-    def act(self, observation, use_random=False):
-        if use_random:
-            return np.random.choice(env.action_space.n)
-        else:
-            return greedy_action_fqi(self.model, observation)
-        
-    def save(self, path):
-        print("Saving model ...")
-        torch.save({
-                    'model_state_dict': self.model.state_dict(),
-                    }, path)
-
-    def load(self):
-        self.model.load_state_dict(torch.load(self.path, map_location='cpu'))
-        self.model.eval()
-
-"""
 class ProjectAgent:
 
     def __init__(self, config, model):
@@ -182,7 +89,7 @@ class ProjectAgent:
             if np.random.rand() < epsilon:
                 action = env.action_space.sample()
             else:
-                action = greedy_action(self.model, state)
+                action = greedy_action_dqn(self.model, state)
 
             # step
             next_state, reward, done, trunc, _ = env.step(action)
@@ -254,6 +161,4 @@ config = {'nb_actions': env.action_space.n,
 # Train agent
 agent = ProjectAgent(config, DQN)
 scores = agent.train(env, 200)
-agent.save('src/DQNagent.pt')
-
-"""
+agent.save('DQNagent.pt')

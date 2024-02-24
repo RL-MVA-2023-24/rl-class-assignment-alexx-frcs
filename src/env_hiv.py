@@ -1,5 +1,6 @@
 import gymnasium as gym
 import numpy as np
+from typing import Union, Optional, Dict
 
 
 class HIVPatient(gym.Env):
@@ -11,8 +12,8 @@ class HIVPatient(gym.Env):
     """
 
     def __init__(
-        self, clipping=True, logscale=False, domain_randomization: bool = False
-    ):
+        self, clipping=True, logscale=False, domain_randomization: bool = False, 
+    seed: Union[int, None] = None, options: Optional[Dict] = None, mode="unhealthy"):
         super(HIVPatient, self).__init__()
 
         self.domain_randomization = domain_randomization
@@ -134,8 +135,7 @@ class HIVPatient(gym.Env):
         self.deltaE = 0.1  # natural death rate (per day)
 
     def reset(
-        self, *, seed: int | None = None, options: dict | None = None, mode="unhealthy"
-    ):
+            self, *, seed: Union[int, None] = None, options: Optional[Dict] = None, mode="unhealthy"    ):
         if mode == "uninfected":
             self.T1 = 1e6
             self.T1star = 0.0
