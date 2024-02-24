@@ -4,11 +4,9 @@ import torch
 import torch.nn as nn 
 import random
 import numpy as np
-import locale
 from tqdm import tqdm
 from sklearn.ensemble import RandomForestRegressor, ExtraTreesRegressor
 
-locale.setlocale(locale.LC_ALL, 'fr_FR')  # Définir la locale en français
 
 
 device = torch.device("cpu")
@@ -106,7 +104,7 @@ class ProjectAgent:
                 print("Episode ", '{:3d}'.format(episode), 
                       ", epsilon ", '{:6.2f}'.format(epsilon), 
                       ", batch size ", '{:5d}'.format(len(self.memory)), 
-                      ", episode return ", locale.format_string('%d', int(episode_cum_reward), grouping=True),
+                      ", episode return ", int(episode_cum_reward),
                       sep='')
                 state, _ = env.reset()
                 episode_return.append(episode_cum_reward)

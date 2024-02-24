@@ -4,14 +4,12 @@ import torch
 import torch.nn as nn 
 import random
 import numpy as np
-import locale
 from tqdm import tqdm
 from sklearn.ensemble import RandomForestRegressor, ExtraTreesRegressor
 import pickle
 from evaluate import evaluate_HIV
 import os
 
-locale.setlocale(locale.LC_ALL, 'fr_FR')  # Définir la locale en français
 
 
 device = torch.device("cpu")
@@ -137,5 +135,5 @@ for iteration in range(nb_iter):
     agent.save()
 
     score_agent: float = evaluate_HIV(agent=agent, nb_episode=1)
-    print(locale.format_string('%d', int(score_agent), grouping=True))
+    print(int(score_agent))
 
