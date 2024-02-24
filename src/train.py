@@ -4,14 +4,12 @@ import torch
 import torch.nn as nn 
 import random
 import numpy as np
-import locale
 from tqdm import tqdm
 import pickle
 import os
 from sklearn.ensemble import RandomForestRegressor, ExtraTreesRegressor
 import extratrees
 
-locale.setlocale(locale.LC_ALL, 'fr_FR')  # Définir la locale en français
 
 
 device = torch.device("cpu")
