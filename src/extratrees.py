@@ -124,6 +124,7 @@ nb_iter = 100
 gamma = 0.9
 nb_iter_fit = 500
 nb_sample_per_it = 3_000
+best_score = -1
 for iteration in range(nb_iter):
     print('iteration', iteration)
     randomness_action = 1 - iteration/nb_iter
@@ -134,8 +135,13 @@ for iteration in range(nb_iter):
     with open('data.pkl', 'rb') as f:
         S, A, R, S2, D = pickle.load(f)
     agent.train(S, A, R, S2, D, nb_iter_fit, gamma) # mean to compute reward
-    agent.save()
 
     score_agent: float = evaluate_HIV(agent=agent, nb_episode=1)
     print(locale.format_string('%d', int(score_agent), grouping=True))
+    if score_agent > best_score:
+        best_score = score_agent
+        agent.save()
+        print('New best agent !')
+    else: 
+        print('Modèle naze')
 
