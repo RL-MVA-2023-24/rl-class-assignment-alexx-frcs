@@ -5,7 +5,6 @@ import torch.nn as nn
 import random
 import numpy as np
 from tqdm import tqdm
-from sklearn.ensemble import RandomForestRegressor, ExtraTreesRegressor
 
 
 
