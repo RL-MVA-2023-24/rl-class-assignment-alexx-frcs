@@ -71,7 +71,7 @@ class ProjectAgent:
         else:
             return greedy_action_dqn(self.model, observation)
 
-    def save(self, path = 'src/DQNagent_target.pt'):
+    def save(self, path = 'DQNagent_target.pt'):
         print("Saving model ...")
         torch.save({
                     'model_state_dict': self.model.state_dict(),
@@ -79,7 +79,7 @@ class ProjectAgent:
 
 
     def load(self):
-        path = 'src/DQNagent_target.pt'
+        path = 'DQNagent_target.pt'
         self.model.load_state_dict(torch.load(path, map_location='cpu'))
         self.model.eval()
 
@@ -167,7 +167,7 @@ class ProjectAgent:
             if done or trunc:
                 episode += 1
                 # Monitoring
-                if self.monitoring_nb_trials>0:
+                if self.monitoring_nb_trials>0 and episode % 50 == 0:
                     MC_dr, MC_tr = self.MC_eval(env, self.monitoring_nb_trials)    # NEW NEW NEW
                     V0 = self.V_initial_state(env, self.monitoring_nb_trials)   # NEW NEW NEW
                     MC_avg_total_reward.append(MC_tr)   # NEW NEW NEW
@@ -178,9 +178,6 @@ class ProjectAgent:
                           ", epsilon ", '{:6.2f}'.format(epsilon), 
                           ", batch size ", '{:4d}'.format(len(self.memory)), 
                           ", ep return ", '{:4.1f}'.format(episode_cum_reward), 
-                          ", MC tot ", '{:6.2f}'.format(MC_tr),
-                          ", MC disc ", '{:6.2f}'.format(MC_dr),
-                          ", V0 ", '{:6.2f}'.format(V0),
                           sep='')
                 else:
                     episode_return.append(episode_cum_reward)
@@ -198,6 +195,7 @@ class ProjectAgent:
                     best_score = episode_cum_reward
                 else:
                     print('Modèle naze')
+                    print('Best score is still ', best_score)
                     
                 episode_cum_reward = 0
             else:
@@ -206,9 +204,11 @@ class ProjectAgent:
     
 state_dim = env.observation_space.shape[0]
 n_action = env.action_space.n 
-nb_neurons= 50
+nb_neurons= 128
 DQN = torch.nn.Sequential(nn.Linear(state_dim, nb_neurons),
                           nn.ReLU(),
+                          nn.Linear(nb_neurons, nb_neurons),
+                          nn.ReLU(), 
                           nn.Linear(nb_neurons, nb_neurons),
                           nn.ReLU(), 
                           nn.Linear(nb_neurons, n_action)).to(device)
@@ -222,12 +222,13 @@ config = {'nb_actions': env.action_space.n,
           'epsilon_max': 1.,
           'epsilon_decay_period': 1000,
           'epsilon_delay_decay': 20,
-          'batch_size': 1000,
+          'batch_size': 20,
           'gradient_steps': 1,
           'update_target_strategy': 'replace', # or 'ema'
           'update_target_freq': 50,
           'update_target_tau': 0.005,
-          'criterion': torch.nn.SmoothL1Loss()}
+          'criterion': torch.nn.SmoothL1Loss(),
+          'monitoring_nb_trials': 50}
 
 # Train agent
 agent = ProjectAgent(config, DQN)
