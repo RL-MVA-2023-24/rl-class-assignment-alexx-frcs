@@ -100,6 +100,7 @@ class ProjectAgent:
         state, _ = env.reset()
         epsilon = self.epsilon_max
         step = 0
+        best_score = -1
         while episode < max_episode:
             # update epsilon
             if step > self.epsilon_delay:
@@ -138,10 +139,18 @@ class ProjectAgent:
                       sep='')
                 state, _ = env.reset()
                 episode_return.append(episode_cum_reward)
+                if episode_cum_reward > best_score:
+                    print('New best score !')
+                    best_score = episode_cum_reward
+                    self.save()
+                else:
+                    print('Modele naze')
+
                 episode_cum_reward = 0
             else:
                 state = next_state
-        return episode_return
+            
+        return episode_return, best_score
     
 state_dim = env.observation_space.shape[0]
 n_action = env.action_space.n 
@@ -170,5 +179,5 @@ config = {'nb_actions': env.action_space.n,
 
 # Train agent
 agent = ProjectAgent(config, DQN)
-scores = agent.train(env, 200)
-agent.save('DQNagent.pt')
+_, best_score = agent.train(env, 200)
+print('Best score', best_score)
