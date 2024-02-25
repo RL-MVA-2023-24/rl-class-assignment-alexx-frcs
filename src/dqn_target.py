@@ -40,8 +40,10 @@ env = TimeLimit(
 
 class ProjectAgent:
 
+
+
     def __init__(self, config, model):
-        device = "cpu"
+        device = "cuda" if next(model.parameters()).is_cuda else "cpu"
         self.nb_actions = config['nb_actions']
         self.gamma = config['gamma'] if 'gamma' in config.keys() else 0.95
         self.batch_size = config['batch_size'] if 'batch_size' in config.keys() else 100
@@ -61,7 +63,7 @@ class ProjectAgent:
         self.update_target_strategy = config['update_target_strategy'] if 'update_target_strategy' in config.keys() else 'replace'
         self.update_target_freq = config['update_target_freq'] if 'update_target_freq' in config.keys() else 20
         self.update_target_tau = config['update_target_tau'] if 'update_target_tau' in config.keys() else 0.005
-
+        self.monitoring_nb_trials = config['monitoring_nb_trials'] if 'monitoring_nb_trials' in config.keys() else 0
 
     def act(self, observation, use_random=False):
         if use_random:
@@ -81,6 +83,35 @@ class ProjectAgent:
         self.model.load_state_dict(torch.load(path, map_location='cpu'))
         self.model.eval()
 
+
+    def MC_eval(self, env, nb_trials):   # NEW NEW NEW
+        MC_total_reward = []
+        MC_discounted_reward = []
+        for _ in range(nb_trials):
+            x,_ = env.reset()
+            done = False
+            trunc = False
+            total_reward = 0
+            discounted_reward = 0
+            step = 0
+            while not (done or trunc):
+                a = greedy_action_dqn(self.model, x)
+                y,r,done,trunc,_ = env.step(a)
+                x = y
+                total_reward += r
+                discounted_reward += self.gamma**step * r
+                step += 1
+            MC_total_reward.append(total_reward)
+            MC_discounted_reward.append(discounted_reward)
+        return np.mean(MC_discounted_reward), np.mean(MC_total_reward)
+    
+    def V_initial_state(self, env, nb_trials):   # NEW NEW NEW
+        with torch.no_grad():
+            for _ in range(nb_trials):
+                val = []
+                x,_ = env.reset()
+                val.append(self.model(torch.Tensor(x).unsqueeze(0).to(device)).max().item())
+        return np.mean(val)
     
     def gradient_step(self):
         if len(self.memory) > self.batch_size:
@@ -95,6 +126,9 @@ class ProjectAgent:
     
     def train(self, env, max_episode):
         episode_return = []
+        MC_avg_total_reward = []   # NEW NEW NEW
+        MC_avg_discounted_reward = []   # NEW NEW NEW
+        V_init_state = []   # NEW NEW NEW
         episode = 0
         episode_cum_reward = 0
         state, _ = env.reset()
@@ -126,31 +160,49 @@ class ProjectAgent:
                 model_state_dict = self.model.state_dict()
                 tau = self.update_target_tau
                 for key in model_state_dict:
-                    target_state_dict[key] = tau*model_state_dict[key] + (1-tau)*target_state_dict[key]
+                    target_state_dict[key] = tau*model_state_dict + (1-tau)*target_state_dict
                 self.target_model.load_state_dict(target_state_dict)
             # next transition
             step += 1
             if done or trunc:
                 episode += 1
-                print("Episode ", '{:3d}'.format(episode), 
-                      ", epsilon ", '{:6.2f}'.format(epsilon), 
-                      ", batch size ", '{:5d}'.format(len(self.memory)), 
-                      ", episode return ", '{:4.1f}'.format(episode_cum_reward),
-                      sep='')
-                state, _ = env.reset()
-                episode_return.append(episode_cum_reward)
-                if episode_cum_reward > best_score:
-                    print('New best score !')
-                    best_score = episode_cum_reward
-                    self.save()
+                # Monitoring
+                if self.monitoring_nb_trials>0:
+                    MC_dr, MC_tr = self.MC_eval(env, self.monitoring_nb_trials)    # NEW NEW NEW
+                    V0 = self.V_initial_state(env, self.monitoring_nb_trials)   # NEW NEW NEW
+                    MC_avg_total_reward.append(MC_tr)   # NEW NEW NEW
+                    MC_avg_discounted_reward.append(MC_dr)   # NEW NEW NEW
+                    V_init_state.append(V0)   # NEW NEW NEW
+                    episode_return.append(episode_cum_reward)   # NEW NEW NEW
+                    print("Episode ", '{:2d}'.format(episode), 
+                          ", epsilon ", '{:6.2f}'.format(epsilon), 
+                          ", batch size ", '{:4d}'.format(len(self.memory)), 
+                          ", ep return ", '{:4.1f}'.format(episode_cum_reward), 
+                          ", MC tot ", '{:6.2f}'.format(MC_tr),
+                          ", MC disc ", '{:6.2f}'.format(MC_dr),
+                          ", V0 ", '{:6.2f}'.format(V0),
+                          sep='')
                 else:
-                    print('Modele naze')
+                    episode_return.append(episode_cum_reward)
+                    print("Episode ", '{:2d}'.format(episode), 
+                          ", epsilon ", '{:6.2f}'.format(epsilon), 
+                          ", batch size ", '{:4d}'.format(len(self.memory)), 
+                          ", ep return ", '{:4.1f}'.format(episode_cum_reward), 
+                          sep='')
 
+                
+                state, _ = env.reset()
+                if episode_cum_reward > best_score:
+                    print('New best model !')
+                    agent.save()
+                    best_score = episode_cum_reward
+                else:
+                    print('Modèle naze')
+                    
                 episode_cum_reward = 0
             else:
                 state = next_state
-            
-        return episode_return, best_score
+        return episode_return, MC_avg_discounted_reward, MC_avg_total_reward, V_init_state, best_score
     
 state_dim = env.observation_space.shape[0]
 n_action = env.action_space.n 
@@ -170,7 +222,7 @@ config = {'nb_actions': env.action_space.n,
           'epsilon_max': 1.,
           'epsilon_decay_period': 1000,
           'epsilon_delay_decay': 20,
-          'batch_size': 20,
+          'batch_size': 1000,
           'gradient_steps': 1,
           'update_target_strategy': 'replace', # or 'ema'
           'update_target_freq': 50,
@@ -179,5 +231,5 @@ config = {'nb_actions': env.action_space.n,
 
 # Train agent
 agent = ProjectAgent(config, DQN)
-_, best_score = agent.train(env, 200)
+_, _, _, _, best_score = agent.train(env, 200)
 print('Best score', best_score)
