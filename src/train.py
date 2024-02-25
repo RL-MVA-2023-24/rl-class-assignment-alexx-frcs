@@ -8,8 +8,6 @@ from tqdm import tqdm
 import pickle
 import os
 from sklearn.ensemble import RandomForestRegressor, ExtraTreesRegressor
-import extratrees
-
 
 
 device = torch.device("cpu")
