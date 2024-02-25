@@ -108,12 +108,12 @@ class ProjectAgent:
                 Qs0a.append(self.Q.predict(s0a))
             return np.argmax(Qs0a)
     
-    def save(self, path = "et.pkl"):
+    def save(self, path = "src/et.pkl"):
         with open(path, 'wb') as f:
             pickle.dump(self.Q, f)
 
     def load(self):
-        path = "et.pkl"
+        path = "src/et.pkl"
         if not os.path.exists(path):
             print("No model to load")
             return
