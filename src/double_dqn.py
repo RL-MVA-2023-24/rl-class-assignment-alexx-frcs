@@ -258,6 +258,7 @@ class double_dqn_agent:
                 state = next_state
             
         return episode_return, MC_avg_discounted_reward, MC_avg_total_reward, V_init_state
+    
     def act(self, observation, use_random=False):
         if use_random:
             a = np.random.choice(4)
