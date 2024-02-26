@@ -12,14 +12,9 @@ import torch
 import torch.nn as nn
 from copy import deepcopy
 import locale
+import evaluate
 locale.setlocale(locale.LC_ALL, 'fr_FR')  # Définir la locale en français
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-env = TimeLimit(
-    env=HIVPatient(domain_randomization=False), max_episode_steps=200
-)  # The time wrapper limits the number of steps in an episode at 200.
-# Now is the floor is yours to implement the agent and train it.
 
 parser = argparse.ArgumentParser(description="Configurer les paramètres pour l'entraînement du modèle.")
 
@@ -40,6 +35,20 @@ parser.add_argument('--update_target_tau', type=float, default=0.005, help='Tau 
 parser.add_argument('--monitoring_nb_trials', type=int, default=1, help='Nombre d\'essais pour le monitoring.')
 parser.add_argument('--monitoring_freq', type=int, default=50, help='Fréquence du monitoring.')
 parser.add_argument('--save_every', type=int, default=10, help='Fréquence de sauvegarde du modèle.')
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+env = TimeLimit(
+    env=HIVPatient(domain_randomization=False), max_episode_steps=200
+)  # The time wrapper limits the number of steps in an episode at 200.
+# Now is the floor is yours to implement the agent and train it.
+
+
+seed = 42
+
+random.seed(seed)
+rng = np.random.default_rng(seed)
+torch.manual_seed(seed)
 
 # Étape 3: Extraction des arguments
 args = parser.parse_args()
@@ -235,14 +244,12 @@ class double_dqn_agent:
                           ", epsilon ", '{:6.2f}'.format(epsilon), 
                           ", batch size ", '{:4d}'.format(len(self.memory)), 
                           ", ep return ", locale.format_string('%d', int(episode_cum_reward), grouping=True),
+                          ", evaluate agent", evaluate.evaluate_agent(self, env=env),
                           sep='')
                     
                 if episode_cum_reward > best_model:
-                    torch.save({
-                    'model_state_dict': self.target_model.state_dict(),
-                    # 'optimizer_state_dict': optimizer.state_dict(),
-                    'reward': episode_cum_reward,
-                    }, f"test.pt")
+                    self.save()
+                    print('New best model !')
                     best_model = episode_cum_reward
                 
                 state, _ = env.reset()
@@ -251,6 +258,27 @@ class double_dqn_agent:
                 state = next_state
             
         return episode_return, MC_avg_discounted_reward, MC_avg_total_reward, V_init_state
+    def act(self, observation, use_random=False):
+        if use_random:
+            a = np.random.choice(4)
+            # print(a)
+            return a
+        else:
+            a = greedy_action(self.model, observation)
+            # print(a)
+            return a
+
+    def save(self, path = "double_DQN.pt"):
+        print("saving")
+        torch.save({
+                    'model_state_dict': self.model.state_dict(),
+                    }, path)
+    def load(self):
+        print("loading")
+        checkpoint = torch.load("double_DQN.pt", map_location=torch.device('cpu'))
+        self.model = DQM_model(6, 256, 4, 6).to(device)
+        self.model.load_state_dict(checkpoint['model_state_dict'])
+        self.model.eval()
     
 # Declare network
 state_dim = env.observation_space.shape[0]
