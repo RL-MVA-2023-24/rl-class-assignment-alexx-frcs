@@ -6,7 +6,7 @@ import numpy as np
 import torch.nn as nn
 import matplotlib.pyplot as plt
 from tqdm import tqdm
-
+import argparse
 import numpy as np
 import torch
 import torch.nn as nn
@@ -20,6 +20,51 @@ env = TimeLimit(
     env=HIVPatient(domain_randomization=False), max_episode_steps=200
 )  # The time wrapper limits the number of steps in an episode at 200.
 # Now is the floor is yours to implement the agent and train it.
+
+parser = argparse.ArgumentParser(description="Configurer les paramètres pour l'entraînement du modèle.")
+
+# Étape 2: Ajout des arguments
+parser.add_argument('--nb_actions', type=int, help='Nombre d\'actions.')
+parser.add_argument('--learning_rate', type=float, default=0.001, help='Taux d\'apprentissage.')
+parser.add_argument('--gamma', type=float, default=0.99, help='Facteur de remise gamma.')
+parser.add_argument('--buffer_size', type=int, default=1000000, help='Taille du buffer.')
+parser.add_argument('--epsilon_min', type=float, default=0.01, help='Epsilon minimum pour l\'exploration.')
+parser.add_argument('--epsilon_max', type=float, default=1.0, help='Epsilon maximum pour l\'exploration.')
+parser.add_argument('--epsilon_decay_period', type=int, default=15000, help='Période de décroissance pour epsilon.')
+parser.add_argument('--epsilon_delay_decay', type=int, default=4000, help='Délai avant de commencer la décroissance d\'epsilon.')
+parser.add_argument('--batch_size', type=int, default=1000, help='Taille du batch pour l\'entraînement.')
+parser.add_argument('--gradient_steps', type=int, default=1, help='Nombre d\'étapes de gradient par mise à jour.')
+parser.add_argument('--update_target_strategy', type=str, default='replace', choices=['replace', 'ema'], help='Stratégie de mise à jour du modèle cible.')
+parser.add_argument('--update_target_freq', type=int, default=400, help='Fréquence de mise à jour du modèle cible.')
+parser.add_argument('--update_target_tau', type=float, default=0.005, help='Tau pour la mise à jour EMA du modèle cible.')
+parser.add_argument('--monitoring_nb_trials', type=int, default=1, help='Nombre d\'essais pour le monitoring.')
+parser.add_argument('--monitoring_freq', type=int, default=50, help='Fréquence du monitoring.')
+parser.add_argument('--save_every', type=int, default=10, help='Fréquence de sauvegarde du modèle.')
+
+# Étape 3: Extraction des arguments
+args = parser.parse_args()
+
+# Utilisation des valeurs d'arguments
+config = {
+    'nb_actions': env.action_space.n,
+    'learning_rate': args.learning_rate,
+    'gamma': args.gamma,
+    'buffer_size': args.buffer_size,
+    'epsilon_min': args.epsilon_min,
+    'epsilon_max': args.epsilon_max,
+    'epsilon_decay_period': args.epsilon_decay_period,
+    'epsilon_delay_decay': args.epsilon_delay_decay,
+    'batch_size': args.batch_size,
+    'gradient_steps': args.gradient_steps,
+    'update_target_strategy': args.update_target_strategy,
+    'update_target_freq': args.update_target_freq,
+    'update_target_tau': args.update_target_tau,
+    'criterion': torch.nn.SmoothL1Loss(),
+    'monitoring_nb_trials': args.monitoring_nb_trials,
+    'monitoring_freq': args.monitoring_freq,
+    'save_every': args.save_every,
+}
+
 
 
 class ReplayBuffer:
@@ -235,24 +280,6 @@ class DQM_model(torch.nn.Module):
         return self.output_layer(x)
 
 model = DQM_model(6, 256, 4, 6).to(device)
-# DQN config
-config = {'nb_actions': env.action_space.n,
-          'learning_rate': 0.001,
-          'gamma': 0.99,
-          'buffer_size': 1_000_000,
-          'epsilon_min': 0.01,
-          'epsilon_max': 1.,
-          'epsilon_decay_period': 15_000,
-          'epsilon_delay_decay': 4_000,
-          'batch_size': 1000,
-          'gradient_steps': 1,
-          'update_target_strategy': 'replace', # or 'ema'
-          'update_target_freq': 400,
-          'update_target_tau': 0.005,
-          'criterion': torch.nn.SmoothL1Loss(),
-          'monitoring_nb_trials': 1,
-          'monitoring_freq' : 50,
-          'save_every': 10}
 
 # Train agent
 agent = double_dqn_agent(config, model)
