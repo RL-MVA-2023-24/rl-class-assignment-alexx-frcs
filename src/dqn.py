@@ -6,7 +6,7 @@ import random
 import numpy as np
 from tqdm import tqdm
 import argparse
-
+from evaluate import evaluate_HIV
 
 parser = argparse.ArgumentParser(description="Configurer les paramètres pour l'entraînement du modèle.")
 
@@ -17,7 +17,7 @@ parser.add_argument('--gamma', type=float, default=0.99, help='Facteur de remise
 parser.add_argument('--buffer_size', type=int, default=1000000, help='Taille du buffer.')
 parser.add_argument('--epsilon_min', type=float, default=0.01, help='Epsilon minimum pour l\'exploration.')
 parser.add_argument('--epsilon_max', type=float, default=1.0, help='Epsilon maximum pour l\'exploration.')
-parser.add_argument('--epsilon_decay_period', type=int, default=15000, help='Période de décroissance pour epsilon.')
+parser.add_argument('--epsilon_decay_period', type=int, default=1000, help='Période de décroissance pour epsilon.')
 parser.add_argument('--epsilon_delay_decay', type=int, default=4000, help='Délai avant de commencer la décroissance d\'epsilon.')
 parser.add_argument('--batch_size', type=int, default=1024, help='Taille du batch pour l\'entraînement.')
 parser.add_argument('--gradient_steps', type=int, default=1, help='Nombre d\'étapes de gradient par mise à jour.')
@@ -100,6 +100,7 @@ class ProjectAgent:
         state, _ = env.reset()
         epsilon = self.epsilon_max
         step = 0
+        best_score = -np.inf
 
         while episode < max_episode:
             # update epsilon
@@ -132,8 +133,14 @@ class ProjectAgent:
                 state, _ = env.reset()
                 episode_return.append(episode_cum_reward)
                 episode_cum_reward = 0
+                score = evaluate_HIV(self, env, nb_episode=1)
+                if score > best_score:
+                    best_score = score
             else:
                 state = next_state
+
+        with open('results_dqn.txt', 'a') as file:
+            file.write(f'nb neurones: {args.nb_neurons}, depth: {args.depth}, best score: {best_score}\n')
 
         return episode_return
         
@@ -184,9 +191,9 @@ config = {'nb_actions': env.action_space.n,
           'buffer_size': 1000000,
           'epsilon_min': 0.01,
           'epsilon_max': 1.,
-          'epsilon_decay_period': 1000,
+          'epsilon_decay_period': args.epsilon_decay_period,
           'epsilon_delay_decay': 20,
-          'batch_size': 20,
+          'batch_size': args.batch_size,
           'depth': args.depth,
           'nb_neurons': args.nb_neurons,
           }
@@ -195,5 +202,5 @@ model = DQM_model(6, args.nb_neurons, 4, args.depth)
 
 # Train agent
 agent = ProjectAgent(config, model)
-scores = agent.train(env, 200)
-agent.save('DQNagent.pt')
+scores = agent.train(env, 2000)
+#agent.save('DQNagent.pt')

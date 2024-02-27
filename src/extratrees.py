@@ -9,7 +9,17 @@ from sklearn.ensemble import RandomForestRegressor, ExtraTreesRegressor
 import pickle
 from evaluate import evaluate_HIV
 import os
+import argparse
 
+parser = argparse.ArgumentParser(description="Configurer les paramètres pour l'entraînement du modèle.")
+
+# Étape 2: Ajout des arguments
+parser.add_argument('--horizon', type=int, help='Horizon')
+parser.add_argument('--n_trees', type=int, help='Nombre d\'arbres')
+parser.add_argument('--min_sample', type=int, help='mùin sample split')
+
+
+args = parser.parse_args()
 
 
 device = torch.device("cpu")
@@ -27,10 +37,12 @@ def greedy_action_fqi(Q,s,nb_actions):
 
 class ProjectAgent():
 
-    def __init__(self):
-        self.Q = np.zeros((3000, env.action_space.n))
+    def __init__(self, args = args, env = env):
+        self.args = args
+        self.horizon = args.horizon
+        self.Q = np.zeros((self.horizon, env.action_space.n))
 
-    def collect_samples(self, horizon, act_randomness,  env = env, disable_tqdm=False, print_done_states=False):
+    def collect_samples(self, horizon, act_randomness, env = env, disable_tqdm=False, print_done_states=False):
         s, _ = env.reset()
         #dataset = []
         S = []
@@ -79,7 +91,7 @@ class ProjectAgent():
                     Q2[:,a2] = Qfunctions[-1].predict(S2A2)
                 max_Q2 = np.max(Q2,axis=1)
                 value = R + gamma*(1-D)*max_Q2
-            Q = ExtraTreesRegressor(n_estimators=50, min_samples_split=2)
+            Q = ExtraTreesRegressor(n_estimators=self.args.n_trees, min_samples_split=self.args.min_sample)
             Q.fit(SA,value)
             Qfunctions.append(Q)
         self.Q = Q
@@ -121,7 +133,7 @@ agent = ProjectAgent()
 nb_iter = 100
 gamma = 0.9
 nb_iter_fit = 500
-nb_sample_per_it = 3_000
+nb_sample_per_it = args.horizon
 best_score = -1
 for iteration in range(nb_iter):
     print('iteration', iteration)
