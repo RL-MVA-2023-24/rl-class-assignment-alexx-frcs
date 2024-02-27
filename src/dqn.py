@@ -5,8 +5,32 @@ import torch.nn as nn
 import random
 import numpy as np
 from tqdm import tqdm
+import argparse
 
 
+parser = argparse.ArgumentParser(description="Configurer les paramètres pour l'entraînement du modèle.")
+
+# Étape 2: Ajout des arguments
+parser.add_argument('--nb_actions', type=int, help='Nombre d\'actions.')
+parser.add_argument('--learning_rate', type=float, default=0.001, help='Taux d\'apprentissage.')
+parser.add_argument('--gamma', type=float, default=0.99, help='Facteur de remise gamma.')
+parser.add_argument('--buffer_size', type=int, default=1000000, help='Taille du buffer.')
+parser.add_argument('--epsilon_min', type=float, default=0.01, help='Epsilon minimum pour l\'exploration.')
+parser.add_argument('--epsilon_max', type=float, default=1.0, help='Epsilon maximum pour l\'exploration.')
+parser.add_argument('--epsilon_decay_period', type=int, default=15000, help='Période de décroissance pour epsilon.')
+parser.add_argument('--epsilon_delay_decay', type=int, default=4000, help='Délai avant de commencer la décroissance d\'epsilon.')
+parser.add_argument('--batch_size', type=int, default=1024, help='Taille du batch pour l\'entraînement.')
+parser.add_argument('--gradient_steps', type=int, default=1, help='Nombre d\'étapes de gradient par mise à jour.')
+parser.add_argument('--update_target_strategy', type=str, default='replace', choices=['replace', 'ema'], help='Stratégie de mise à jour du modèle cible.')
+parser.add_argument('--update_target_freq', type=int, default=400, help='Fréquence de mise à jour du modèle cible.')
+parser.add_argument('--update_target_tau', type=float, default=0.005, help='Tau pour la mise à jour EMA du modèle cible.')
+parser.add_argument('--monitoring_nb_trials', type=int, default=1, help='Nombre d\'essais pour le monitoring.')
+parser.add_argument('--monitoring_freq', type=int, default=50, help='Fréquence du monitoring.')
+parser.add_argument('--save_every', type=int, default=10, help='Fréquence de sauvegarde du modèle.')
+parser.add_argument('--depth', type=int, default=2, help='profondeur du réseau de neurones.')
+parser.add_argument('--nb_neurons', type=int, default=24, help='Nombre de neurones dans la couche cachée.')
+
+args = parser.parse_args()
 
 device = torch.device("cpu")
 env = TimeLimit(
@@ -137,12 +161,21 @@ class ReplayBuffer:
 
 state_dim = env.observation_space.shape[0]
 n_action = env.action_space.n 
-nb_neurons=24
-DQN = torch.nn.Sequential(nn.Linear(state_dim, nb_neurons),
-                          nn.ReLU(),
-                          nn.Linear(nb_neurons, nb_neurons),
-                          nn.ReLU(), 
-                          nn.Linear(nb_neurons, n_action)).to(device)
+
+class DQM_model(torch.nn.Module):
+    def __init__(self, input_dim, hidden_dim, output_dim, depth = 2):
+        super(DQM_model, self).__init__()
+        self.input_layer = torch.nn.Linear(input_dim, hidden_dim)
+        self.hidden_layers = torch.nn.ModuleList([torch.nn.Linear(hidden_dim, hidden_dim) for _ in range(depth - 1)])
+        self.output_layer = torch.nn.Linear(hidden_dim, output_dim)
+        self.activation = torch.nn.ReLU()
+        
+    def forward(self, x):
+        x = self.activation(self.input_layer(x))
+        for layer in self.hidden_layers:
+            x = self.activation(layer(x))
+        return self.output_layer(x)
+    
 
 # DQN config
 config = {'nb_actions': env.action_space.n,
@@ -153,9 +186,14 @@ config = {'nb_actions': env.action_space.n,
           'epsilon_max': 1.,
           'epsilon_decay_period': 1000,
           'epsilon_delay_decay': 20,
-          'batch_size': 20}
+          'batch_size': 20,
+          'depth': args.depth,
+          'nb_neurons': args.nb_neurons,
+          }
+
+model = DQM_model(6, args.nb_neurons, 4, args.depth)
 
 # Train agent
-agent = ProjectAgent(config, DQN)
+agent = ProjectAgent(config, model)
 scores = agent.train(env, 200)
 agent.save('DQNagent.pt')

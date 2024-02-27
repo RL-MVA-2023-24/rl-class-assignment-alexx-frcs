@@ -244,7 +244,7 @@ class double_dqn_agent:
                           ", epsilon ", '{:6.2f}'.format(epsilon), 
                           ", batch size ", '{:4d}'.format(len(self.memory)), 
                           ", ep return ", locale.format_string('%d', int(episode_cum_reward), grouping=True),
-                          ", evaluate agent", evaluate_HIV(self, env=env),
+                          ", evaluate agent", evaluate_HIV(self, env=env, nb_episode=1),
                           sep='')
                 score_agent: float = evaluate_HIV(agent=self, nb_episode=1)
                     
