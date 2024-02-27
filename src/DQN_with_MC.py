@@ -6,6 +6,8 @@ import numpy as np
 import torch.nn as nn
 import matplotlib.pyplot as plt
 from tqdm import tqdm
+import argparse
+from evaluate import evaluate_HIV
 
 import numpy as np
 import torch
@@ -13,6 +15,14 @@ import torch.nn as nn
 from copy import deepcopy
 import locale
 locale.setlocale(locale.LC_ALL, 'fr_FR')  # Définir la locale en français
+
+parser = argparse.ArgumentParser(description="Configurer les paramètres pour l'entraînement du modèle.")
+
+# Étape 2: Ajout des arguments
+parser.add_argument('--nb_neurons', type=int, help='Nombre de neurones')
+parser.add_argument('--depth', type=int, help='Depth')
+
+args = parser.parse_args()
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -70,6 +80,7 @@ class dqn_agent:
         self.update_target_tau = config['update_target_tau'] if 'update_target_tau' in config.keys() else 0.005
         self.monitoring_nb_trials = config['monitoring_nb_trials'] if 'monitoring_nb_trials' in config.keys() else 0
         self.monitoring_freq = config['monitoring_freq'] if 'monitoring_freq' in config.keys() else 50
+        self.args = args
 
     def MC_eval(self, env, nb_trials):   # NEW NEW NEW
         MC_total_reward = []
@@ -121,7 +132,7 @@ class dqn_agent:
         state, _ = env.reset()
         epsilon = self.epsilon_max
         step = 0
-        best_model = 0
+        best_score = 0
         while episode < max_episode:
             # update epsilon
             if step > self.epsilon_delay:
@@ -176,34 +187,27 @@ class dqn_agent:
                           ", batch size ", '{:4d}'.format(len(self.memory)), 
                           ", ep return ", locale.format_string('%d', int(episode_cum_reward), grouping=True),
                           sep='')
-                    
-                if episode_cum_reward > best_model:
+                score = evaluate_HIV(self, env = env, nb_episode=1)  
+                if score > best_score:
                     torch.save({
                     'model_state_dict': self.target_model.state_dict(),
                     # 'optimizer_state_dict': optimizer.state_dict(),
                     'reward': episode_cum_reward,
                     }, f"test.pt")
-                    best_model = episode_cum_reward
+                    best_score = score
                 
                 state, _ = env.reset()
                 episode_cum_reward = 0
             else:
                 state = next_state
+        with open('results_dqn.txt', 'a') as file:
+            file.write(f'nb neurones: {args.nb_neurons}, depth: {args.depth}, best score: {best_score}\n')
             
         return episode_return, MC_avg_discounted_reward, MC_avg_total_reward, V_init_state
     
 # Declare network
 state_dim = env.observation_space.shape[0]
 n_action = env.action_space.n 
-nb_neurons= 24
-
-DQN = torch.nn.Sequential(nn.Linear(state_dim, nb_neurons),
-                          nn.ReLU(),
-                          nn.Linear(nb_neurons, nb_neurons),
-                          nn.Tanh(), 
-                          nn.Linear(nb_neurons, nb_neurons),
-                          nn.ReLU(),
-                          nn.Linear(nb_neurons, n_action)).to(device)
 
 class DQM_model(torch.nn.Module):
     def __init__(self, input_dim, hidden_dim, output_dim, depth = 2):
@@ -219,7 +223,7 @@ class DQM_model(torch.nn.Module):
             x = self.activation(layer(x))
         return self.output_layer(x)
 
-model = DQM_model(6, 256, 4, 6).to(device)
+model = DQM_model(6, args.nb_neurons, 4,  depth = args.depth).to(device)
 # DQN config
 config = {'nb_actions': env.action_space.n,
           'learning_rate': 0.001,

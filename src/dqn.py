@@ -133,7 +133,7 @@ class ProjectAgent:
                 state, _ = env.reset()
                 episode_return.append(episode_cum_reward)
                 episode_cum_reward = 0
-                score = evaluate_HIV(self, env, nb_episode=1)
+                score = evaluate_HIV(self, env = env, nb_episode=1)
                 if score > best_score:
                     best_score = score
             else:
