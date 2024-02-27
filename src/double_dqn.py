@@ -12,7 +12,7 @@ import torch
 import torch.nn as nn
 from copy import deepcopy
 import locale
-import evaluate
+from evaluate import evaluate_HIV
 locale.setlocale(locale.LC_ALL, 'fr_FR')  # Définir la locale en français
 
 
@@ -244,13 +244,14 @@ class double_dqn_agent:
                           ", epsilon ", '{:6.2f}'.format(epsilon), 
                           ", batch size ", '{:4d}'.format(len(self.memory)), 
                           ", ep return ", locale.format_string('%d', int(episode_cum_reward), grouping=True),
-                          ", evaluate agent", evaluate.evaluate_agent(self, env=env),
+                          ", evaluate agent", evaluate_HIV(self, env=env),
                           sep='')
+                score_agent: float = evaluate_HIV(agent=self, nb_episode=1)
                     
-                if episode_cum_reward > best_model:
+                if score_agent > best_model:
                     self.save()
                     print('New best model !')
-                    best_model = episode_cum_reward
+                    best_model = score_agent
                 
                 state, _ = env.reset()
                 episode_cum_reward = 0
