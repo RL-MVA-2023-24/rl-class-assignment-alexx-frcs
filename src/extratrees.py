@@ -17,6 +17,7 @@ parser = argparse.ArgumentParser(description="Configurer les paramètres pour l'
 parser.add_argument('--horizon', type=int, help='Horizon')
 parser.add_argument('--n_trees', type=int, help='Nombre d\'arbres')
 parser.add_argument('--min_sample', type=int, help='mùin sample split')
+parser.add_argument('--random_true', type=int, help='randomize domain')
 
 
 args = parser.parse_args()
@@ -24,7 +25,7 @@ args = parser.parse_args()
 
 device = torch.device("cpu")
 env = TimeLimit(
-    env=HIVPatient(domain_randomization=False), max_episode_steps=200
+    env=HIVPatient(domain_randomization=args.random_true), max_episode_steps=200
 )
 
     
@@ -108,22 +109,25 @@ class ProjectAgent():
                 Qs0a.append(self.Q.predict(s0a))
             return np.argmax(Qs0a)
     
-    def save(self, path = "et.pkl"):
+    def save(self, path):
+        if args.random_true:
+            path = "et_random.pkl"
+        else:
+            path = "et.pkl"
         with open(path, 'wb') as f:
             pickle.dump(self.Q, f)
 
     def load(self):
-        path = "et.pkl"
+        if args.random_true:
+            path = "et_random.pkl"
+        else:
+            path = "et.pkl"
         if not os.path.exists(path):
             print("No model to load")
             return
         with open(path, 'rb') as f:
             self.Q = pickle.load(f)
 
-
-env = TimeLimit(
-    env=HIVPatient(domain_randomization=False), max_episode_steps=200 # 200
-)  # The time wrapper limits the number of steps in an episode at 200.
 # Now is the floor is yours to implement the agent and train it.
 best_score = -1
 
