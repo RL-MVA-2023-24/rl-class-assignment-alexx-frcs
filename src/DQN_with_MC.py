@@ -21,13 +21,14 @@ parser = argparse.ArgumentParser(description="Configurer les paramètres pour l'
 # Étape 2: Ajout des arguments
 parser.add_argument('--nb_neurons', type=int, help='Nombre de neurones')
 parser.add_argument('--depth', type=int, help='Depth')
+parser.add_argument('--random_domain', type=bool, help='randomize dans le modèle')
 
 args = parser.parse_args()
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 env = TimeLimit(
-    env=HIVPatient(domain_randomization=False), max_episode_steps=200
+    env=HIVPatient(domain_randomization=args.random_domain), max_episode_steps=200
 )  # The time wrapper limits the number of steps in an episode at 200.
 # Now is the floor is yours to implement the agent and train it.
 
@@ -189,11 +190,7 @@ class dqn_agent:
                           sep='')
                 score = evaluate_HIV(self, env = env, nb_episode=1)  
                 if score > best_score:
-                    torch.save({
-                    'model_state_dict': self.target_model.state_dict(),
-                    # 'optimizer_state_dict': optimizer.state_dict(),
-                    'reward': episode_cum_reward,
-                    }, f"test.pt")
+                    self.save()
                     best_score = score
                 
                 state, _ = env.reset()
@@ -202,8 +199,48 @@ class dqn_agent:
                 state = next_state
         with open('results_dqn.txt', 'a') as file:
             file.write(f'nb neurones: {args.nb_neurons}, depth: {args.depth}, best score: {best_score}\n')
-            
+        print('Best score final:', best_score)   
         return episode_return, MC_avg_discounted_reward, MC_avg_total_reward, V_init_state
+    
+    def act(self, observation, use_random=False):
+        if use_random:
+            a = np.random.choice(4)
+            # print(a)
+            return a
+        else:
+            a = greedy_action(self.model, observation)
+            # print(a)
+            return a
+    
+    def save(self, path = "DQN_model.pt"):
+        if args.random_domain:
+            print('Saving')
+            path = "DQN_model_random_domain.pt"
+            torch.save({
+                'model_state_dict': self.model.state_dict(),
+                }, path = "DQN_model_random_domain.pt")        
+        else:    
+            print('Saving')
+            torch.save({
+                'model_state_dict': self.model.state_dict(),
+                }, path = "DQN_model.pt")
+
+        
+
+    def load(self):
+        print("loading")
+        if args.random_domain:
+            checkpoint = torch.load("DQN_model_random_domain.pt", map_location=torch.device('cpu'))
+            self.model = DQM_model(6, args.nb_neurons, 4, args.depth).to(device)
+            self.model.load_state_dict(checkpoint['model_state_dict'])
+            self.model.eval()
+        else:
+            checkpoint = torch.load("DQN_model.pt", map_location=torch.device('cpu'))
+            self.model = DQM_model(6, args.nb_neurons, 4, args.depth).to(device)
+            self.model.load_state_dict(checkpoint['model_state_dict'])
+            self.model.eval()
+    
+
     
 # Declare network
 state_dim = env.observation_space.shape[0]
