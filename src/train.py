@@ -132,13 +132,13 @@ class ProjectAgent:
 
     def load(self):
         print("loading")
-        checkpoint = torch.load("prioritez_replay_r=f.pt", map_location=torch.device('cpu'))
+        checkpoint = torch.load("src/prioritez_replay_r=f.pt", map_location=torch.device('cpu'))
         self.dqn_model = DQM_model(6, 256, 4, 6).to(device)
         self.dqn_model.load_state_dict(checkpoint['model_state_dict'])
         self.dqn_model.eval()
-        checkpoint = torch.load("double_DQN.pt", map_location=torch.device('cpu'))
+        checkpoint = torch.load("src/double_DQN.pt", map_location=torch.device('cpu'))
         self.double_DQN_model = DQM_model(6, 256, 4, 6).to(device)
         self.double_DQN_model.load_state_dict(checkpoint['model_state_dict'])
         self.double_DQN_model.eval()
-        with open("et.pkl", 'rb') as f:
+        with open("src/et.pkl", 'rb') as f:
             self.Q = pickle.load(f)
