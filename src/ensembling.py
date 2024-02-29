@@ -14,10 +14,6 @@ from copy import deepcopy
 import locale
 import pickle
 from evaluate import evaluate_HIV
-from sklearn.ensemble import  ExtraTreesRegressor
-from double_dqn import double_dqn_agent as double_dqn_agent
-from dqn import ProjectAgent as dqn_agent
-from extratrees import ProjectAgent as et_agent
 
 locale.setlocale(locale.LC_ALL, 'fr_FR')  # Définir la locale en français
 
@@ -121,15 +117,15 @@ class ensembling_agent:
 
     def load(self):
         print("loading")
-        checkpoint = torch.load("DQN_model_random.pt", map_location=torch.device('cpu'))
-        self.dqn_model = DQM_model(6, args.nb_neurons, 4, args.depth).to(device)
+        checkpoint = torch.load("prioritez_replay_r=f.pt", map_location=torch.device('cpu'))
+        self.dqn_model = DQM_model(6, 256, 4, 6).to(device)
         self.dqn_model.load_state_dict(checkpoint['model_state_dict'])
         self.dqn_model.eval()
-        checkpoint = torch.load("double_DQN_random.pt", map_location=torch.device('cpu'))
-        self.double_DQN_model = DQM_model(6, args.nb_neurons, 4, args.depth).to(device)
+        checkpoint = torch.load("double_DQN.pt", map_location=torch.device('cpu'))
+        self.double_DQN_model = DQM_model(6, 256, 4, 6).to(device)
         self.double_DQN_model.load_state_dict(checkpoint['model_state_dict'])
         self.double_DQN_model.eval()
-        with open("et_random.pkl", 'rb') as f:
+        with open("et.pkl", 'rb') as f:
             self.Q = pickle.load(f)
             
 

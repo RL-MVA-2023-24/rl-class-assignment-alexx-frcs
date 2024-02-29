@@ -15,7 +15,7 @@ env = TimeLimit(
     env=HIVPatient(domain_randomization=False), max_episode_steps=200
 )
 
-def greedy_action(network, state):
+def greedy_action_dqn(network, state):
     device = "cuda" if next(network.parameters()).is_cuda else "cpu"
     with torch.no_grad():
         Q = network(torch.Tensor(state).unsqueeze(0).to(device))
@@ -70,7 +70,7 @@ class ReplayBuffer:
     def __len__(self):
         return len(self.data)
     
-
+"""
 class ProjectAgent:
 
     def act(self, observation, use_random=False):
@@ -79,7 +79,7 @@ class ProjectAgent:
             # print(a)
             return a
         else:
-            a = greedy_action(self.model, observation)
+            a = greedy_action_dqn(self.model, observation)
             # print(a)
             return a
 
@@ -94,3 +94,51 @@ class ProjectAgent:
         self.model = DQM_model(6, 256, 4, 6).to(device)
         self.model.load_state_dict(checkpoint['model_state_dict'])
         self.model.eval()
+"""
+
+
+class ProjectAgent:
+
+    def act(self, observation, use_random=False):
+        if use_random:
+            a = np.random.choice(4)
+            # print(a)
+            return a
+        else:
+            actions = np.zeros(4)
+            a_dqn = greedy_action_dqn(self.dqn_model, observation)
+            actions[a_dqn] += 1
+            a_double_dqn = greedy_action_dqn(self.double_DQN_model, observation)
+            actions[a_double_dqn] += 1
+            a_et = greedy_action_fqi(self.Q, observation, 4)
+            actions[a_et] += 1
+            a = np.argmax(actions)
+            # print(a)
+            return a
+
+    def save(self, path_dqn = "ensembling_double_DQN.pt", path_double_dqn = "ensembling_double_DQN.pt", 
+             path_et = "ensembling_et.pkl"):
+        print("saving DQN model")
+        torch.save({
+                    'model_state_dict': self.dqn_model.state_dict(),
+                    }, path_dqn)
+        print("saving double DQN model")
+        torch.save({
+                    'model_state_dict': self.double_DQN_model.state_dict(),
+                    }, path_double_dqn)
+        print("saving ET model")
+        with open(path_et, 'wb') as f:
+            pickle.dump(self.Q, f)
+
+    def load(self):
+        print("loading")
+        checkpoint = torch.load("prioritez_replay_r=f.pt", map_location=torch.device('cpu'))
+        self.dqn_model = DQM_model(6, 256, 4, 6).to(device)
+        self.dqn_model.load_state_dict(checkpoint['model_state_dict'])
+        self.dqn_model.eval()
+        checkpoint = torch.load("double_DQN.pt", map_location=torch.device('cpu'))
+        self.double_DQN_model = DQM_model(6, 256, 4, 6).to(device)
+        self.double_DQN_model.load_state_dict(checkpoint['model_state_dict'])
+        self.double_DQN_model.eval()
+        with open("et.pkl", 'rb') as f:
+            self.Q = pickle.load(f)
