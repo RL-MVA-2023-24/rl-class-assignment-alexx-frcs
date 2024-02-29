@@ -17,7 +17,7 @@ parser = argparse.ArgumentParser(description="Configurer les paramètres pour l'
 parser.add_argument('--horizon', type=int, help='Horizon')
 parser.add_argument('--n_trees', type=int, help='Nombre d\'arbres')
 parser.add_argument('--min_sample', type=int, help='mùin sample split')
-parser.add_argument('--random_true', type=int, help='randomize domain')
+parser.add_argument('--random_true', type=bool, help='randomize domain')
 
 
 args = parser.parse_args()

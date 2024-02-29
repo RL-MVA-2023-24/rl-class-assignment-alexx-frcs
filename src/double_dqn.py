@@ -35,11 +35,16 @@ parser.add_argument('--update_target_tau', type=float, default=0.005, help='Tau 
 parser.add_argument('--monitoring_nb_trials', type=int, default=1, help='Nombre d\'essais pour le monitoring.')
 parser.add_argument('--monitoring_freq', type=int, default=50, help='Fréquence du monitoring.')
 parser.add_argument('--save_every', type=int, default=10, help='Fréquence de sauvegarde du modèle.')
+parser.add_argument('--depth', type=int, default=2, help='profondeur du réseau de neurones.')
+parser.add_argument('--nb_neurons', type=int, default=24, help='Nombre de neurones dans la couche cachée.')
+parser.add_argument('--random_true', type=bool, default='False', help='random domain')
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+args = parser.parse_args()
+
 
 env = TimeLimit(
-    env=HIVPatient(domain_randomization=False), max_episode_steps=200
+    env=HIVPatient(domain_randomization=args.random_true), max_episode_steps=200
 )  # The time wrapper limits the number of steps in an episode at 200.
 # Now is the floor is yours to implement the agent and train it.
 
@@ -51,7 +56,6 @@ rng = np.random.default_rng(seed)
 torch.manual_seed(seed)
 
 # Étape 3: Extraction des arguments
-args = parser.parse_args()
 
 # Utilisation des valeurs d'arguments
 config = {
@@ -272,9 +276,16 @@ class double_dqn_agent:
 
     def save(self, path = "double_DQN.pt"):
         print("saving")
-        torch.save({
+        if args.random_true:
+            path = "double_DQN_random.pt"
+            torch.save({
                     'model_state_dict': self.model.state_dict(),
                     }, path)
+        else:
+            path = "double_DQN.pt"
+            torch.save({
+                        'model_state_dict': self.model.state_dict(),
+                        }, path)
     def load(self):
         print("loading")
         checkpoint = torch.load("double_DQN.pt", map_location=torch.device('cpu'))
@@ -285,16 +296,6 @@ class double_dqn_agent:
 # Declare network
 state_dim = env.observation_space.shape[0]
 n_action = env.action_space.n 
-nb_neurons= 24
-
-DQN = torch.nn.Sequential(nn.Linear(state_dim, nb_neurons),
-                          nn.ReLU(),
-                          nn.Linear(nb_neurons, nb_neurons),
-                          nn.Tanh(), 
-                          nn.Linear(nb_neurons, nb_neurons),
-                          nn.ReLU(),
-                          nn.Linear(nb_neurons, n_action)).to(device)
-
 class DQM_model(torch.nn.Module):
     def __init__(self, input_dim, hidden_dim, output_dim, depth = 2):
         super(DQM_model, self).__init__()
@@ -309,7 +310,7 @@ class DQM_model(torch.nn.Module):
             x = self.activation(layer(x))
         return self.output_layer(x)
 
-model = DQM_model(6, 256, 4, 6).to(device)
+model = DQM_model(6, args.nb_neurons, 4, args.depth).to(device)
 
 # Train agent
 agent = double_dqn_agent(config, model)
