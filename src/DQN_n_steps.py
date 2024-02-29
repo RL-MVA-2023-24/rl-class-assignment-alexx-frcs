@@ -8,6 +8,8 @@ import matplotlib.pyplot as plt
 from tqdm import tqdm
 import argparse
 from evaluate import evaluate_HIV
+from collections import deque
+
 
 import numpy as np
 import torch
@@ -117,6 +119,7 @@ class dqn_agent:
     def gradient_step(self):
         if len(self.memory) > self.batch_size:
             X, A, R, Y, D = self.memory.sample(self.batch_size)
+            print('Y shape:', Y.shape)
 
             # Step 1: Select action using the online model
             with torch.no_grad():  # Ensuring no gradients are computed for this operation
@@ -151,6 +154,7 @@ class dqn_agent:
         epsilon = self.epsilon_max
         step = 0
         best_score = 0
+        mem = deque()
         while episode < max_episode:
             # update epsilon
             if step > self.epsilon_delay:
@@ -162,6 +166,22 @@ class dqn_agent:
                 action = greedy_action(self.model, state)
             # step
             next_state, reward, done, trunc, _ = env.step(action)
+
+            mem.append((state, action, reward, next_state, done))
+            
+            episode_cum_reward += reward
+            
+            while len(mem) >= self.n_steps : # Not the last one because the end is truncation ? 
+                s_mem, a_mem,  discount_R,  si_, done_ = mem.popleft()
+                if not done_ and mem:
+                    for i in range(self.n_steps-1):
+                        si, ai,  ri, si_,done_ = mem[i]
+                        discount_R += ri * self.gamma ** (i + 1)
+                        if done_:
+                            break
+                # self.buffer.append(state, action, next_state, reward, done)
+                self.memory.append(s_mem, a_mem,  discount_R, si_, done)
+            """
             episode_cum_reward += reward
             reward_n = reward
             for i in range(self.n_steps):
@@ -171,8 +191,10 @@ class dqn_agent:
                 reward_n += self.gamma**i * reward
                 if done or trunc:
                     break
+            
 
             self.memory.append(state, action, reward_n, next_state, done)
+            """
             # train
             for _ in range(self.nb_gradient_steps): 
                 self.gradient_step()
@@ -297,7 +319,7 @@ config = {'nb_actions': env.action_space.n,
           'epsilon_max': 1.,
           'epsilon_decay_period': 100,
           'epsilon_delay_decay': 4_000,
-          'batch_size': 1000,
+          'batch_size': 1024,
           'gradient_steps': 1,
           'update_target_strategy': 'replace', # or 'ema'
           'update_target_freq': 400,

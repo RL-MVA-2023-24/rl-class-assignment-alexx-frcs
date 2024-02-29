@@ -248,14 +248,16 @@ class double_dqn_agent:
                           ", epsilon ", '{:6.2f}'.format(epsilon), 
                           ", batch size ", '{:4d}'.format(len(self.memory)), 
                           ", ep return ", locale.format_string('%d', int(episode_cum_reward), grouping=True),
-                          ", evaluate agent", evaluate_HIV(self, env=env, nb_episode=1),
                           sep='')
-                score_agent: float = evaluate_HIV(agent=self, nb_episode=1)
+                score_agent: float = evaluate_HIV(agent=self, nb_episode=10)
+                print("Score: ", locale.format_string('%d', int(score_agent), grouping=True))
+
                     
                 if score_agent > best_model:
                     self.save()
                     print('New best model !')
                     best_model = score_agent
+                print('Current best model: ', best_model)
                 
                 state, _ = env.reset()
                 episode_cum_reward = 0
@@ -314,7 +316,7 @@ model = DQM_model(6, args.nb_neurons, 4, args.depth).to(device)
 
 # Train agent
 agent = double_dqn_agent(config, model)
-ep_length, disc_rewards, tot_rewards, V0 = agent.train(env, 2000)
+ep_length, disc_rewards, tot_rewards, V0 = agent.train(env, 300)
 plt.plot(ep_length, label="training episode length")
 plt.plot(tot_rewards, label="MC eval of total reward")
 plt.legend()
