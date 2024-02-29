@@ -215,22 +215,23 @@ class dqn_agent:
     def save(self, path = "DQN_model.pt"):
         if args.random_domain:
             print('Saving')
-            path = "DQN_model_random_domain.pt"
+            path = "DQN_model_random.pt"
             torch.save({
                 'model_state_dict': self.model.state_dict(),
-                }, path = "DQN_model_random_domain.pt")        
+                }, path)        
         else:    
             print('Saving')
+            path = "DQN_model.pt"
             torch.save({
                 'model_state_dict': self.model.state_dict(),
-                }, path = "DQN_model.pt")
+                }, path)
 
         
 
     def load(self):
         print("loading")
         if args.random_domain:
-            checkpoint = torch.load("DQN_model_random_domain.pt", map_location=torch.device('cpu'))
+            checkpoint = torch.load("DQN_model_random.pt", map_location=torch.device('cpu'))
             self.model = DQM_model(6, args.nb_neurons, 4, args.depth).to(device)
             self.model.load_state_dict(checkpoint['model_state_dict'])
             self.model.eval()
