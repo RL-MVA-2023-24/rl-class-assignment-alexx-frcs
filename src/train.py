@@ -83,14 +83,14 @@ class ProjectAgent:
             # print(a)
             return a
 
-    def save(self, path = "src/double_DQN.pt"):
+    def save(self, path = "src/DQN_model.pt"):
         print("saving")
         torch.save({
                     'model_state_dict': self.model.state_dict(),
                     }, path)
     def load(self):
         print("loading")
-        checkpoint = torch.load("src/double_DQN.pt", map_location=torch.device('cpu'))
+        checkpoint = torch.load("src/DQN_model.pt", map_location=torch.device('cpu'))
         self.model = DQM_model(6, 256, 4, 6).to(device)
         self.model.load_state_dict(checkpoint['model_state_dict'])
         self.model.eval()

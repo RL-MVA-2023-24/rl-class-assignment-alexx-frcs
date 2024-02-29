@@ -162,6 +162,7 @@ class dqn_agent:
                 action = greedy_action(self.model, state)
             # step
             next_state, reward, done, trunc, _ = env.step(action)
+            episode_cum_reward += reward
             reward_n = reward
             for i in range(self.n_steps):
                 next_state_ = next_state
@@ -172,7 +173,6 @@ class dqn_agent:
                     break
 
             self.memory.append(state, action, reward_n, next_state, done)
-            episode_cum_reward += reward_n
             # train
             for _ in range(self.nb_gradient_steps): 
                 self.gradient_step()
@@ -295,7 +295,7 @@ config = {'nb_actions': env.action_space.n,
           'buffer_size': 1_000_000,
           'epsilon_min': 0.01,
           'epsilon_max': 1.,
-          'epsilon_decay_period': 15_000,
+          'epsilon_decay_period': 100,
           'epsilon_delay_decay': 4_000,
           'batch_size': 1000,
           'gradient_steps': 1,
