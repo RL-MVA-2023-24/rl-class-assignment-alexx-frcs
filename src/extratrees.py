@@ -109,7 +109,7 @@ class ProjectAgent():
                 Qs0a.append(self.Q.predict(s0a))
             return np.argmax(Qs0a)
     
-    def save(self, path):
+    def save(self, path = "et.pkl"):
         if args.random_true:
             path = "et_random.pkl"
         else:
