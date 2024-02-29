@@ -39,7 +39,7 @@ def greedy_action_fqi(Q,s,nb_actions):
 # ENJOY!
 
 class DQM_model(torch.nn.Module):
-    def __init__(self, input_dim, hidden_dim, output_dim, depth = 2):
+    def __init__(self, input_dim, hidden_dim, output_dim, depth):
         super(DQM_model, self).__init__()
         self.input_layer = torch.nn.Linear(input_dim, hidden_dim)
         self.hidden_layers = torch.nn.ModuleList([torch.nn.Linear(hidden_dim, hidden_dim) for _ in range(depth - 1)])
@@ -83,14 +83,14 @@ class ProjectAgent:
             # print(a)
             return a
 
-    def save(self, path = "src/DQN_model.pt"):
+    def save(self, path = "src/DQN_model_random.pt"):
         print("saving")
         torch.save({
                     'model_state_dict': self.model.state_dict(),
                     }, path)
     def load(self):
         print("loading")
-        checkpoint = torch.load("src/DQN_model.pt", map_location=torch.device('cpu'))
+        checkpoint = torch.load("src/DQN_model_random.pt", map_location=torch.device('cpu'))
         self.model = DQM_model(6, 256, 4, 6).to(device)
         self.model.load_state_dict(checkpoint['model_state_dict'])
         self.model.eval()
