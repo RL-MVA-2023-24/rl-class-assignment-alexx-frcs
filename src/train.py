@@ -70,7 +70,7 @@ class ReplayBuffer:
     def __len__(self):
         return len(self.data)
     
-"""
+
 class ProjectAgent:
 
     def act(self, observation, use_random=False):
@@ -142,3 +142,4 @@ class ProjectAgent:
         self.double_DQN_model.eval()
         with open("src/et.pkl", 'rb') as f:
             self.Q = pickle.load(f)
+"""
